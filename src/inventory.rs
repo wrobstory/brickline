@@ -5,45 +5,44 @@
 
 use serde::Deserialize;
 /// The top level inventory that will hold a vector of Items
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Inventory {
     #[serde(rename = "ITEM")]
-    pub items: Vec<Item>
+    pub items: Vec<Item>,
 }
 
 /// A single Lego Item
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Item {
     #[serde(rename = "ITEMTYPE")]
     pub item_type: ItemType,
     #[serde(rename = "ITEMID")]
     pub item_id: ItemID,
     #[serde(rename = "COLOR")]
-    pub color: Option<Color>, 
+    pub color: Option<Color>,
     #[serde(rename = "MAXPRICE")]
-    pub max_price: Option<MaxPrice>, 
+    pub max_price: Option<MaxPrice>,
     #[serde(rename = "MINQTY")]
     pub min_qty: Option<MinQty>,
     #[serde(rename = "QTYFILLED")]
     pub qty_filled: Option<QtyFilled>,
     #[serde(rename = "CONDITION")]
-    pub condition: Option<Condition>, 
+    pub condition: Option<Condition>,
     #[serde(rename = "REMARKS")]
-    pub remarks: Option<Remarks>, 
+    pub remarks: Option<Remarks>,
     #[serde(rename = "NOTIFY")]
     pub notify: Option<Notify>,
     #[serde(rename = "WANTEDSHOW")]
     pub wanted_show: Option<WantedShow>,
     #[serde(rename = "WANTEDLISTID")]
-    pub wanted_list_id: Option<WantedListID>
+    pub wanted_list_id: Option<WantedListID>,
 }
 
-
 /// The type of the Lego Item
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub enum ItemType {
-	Set,
+    Set,
     Part,
     Minifig,
     Book,
@@ -51,7 +50,7 @@ pub enum ItemType {
     Catalog,
     Instruction,
     OriginalBox,
-    UnsortedLot
+    UnsortedLot,
 }
 
 impl std::convert::TryFrom<String> for ItemType {
@@ -67,15 +66,15 @@ impl std::convert::TryFrom<String> for ItemType {
             "I" => return Ok(Self::Instruction),
             "O" => return Ok(Self::OriginalBox),
             "U" => return Ok(Self::UnsortedLot),
-            unsupported =>  Err(format!("{} is not a supported ItemType!", unsupported))
+            unsupported => Err(format!("{} is not a supported ItemType!", unsupported)),
         }
     }
 }
 
 /// The canonical Lego catalog item number
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Hash)]
 #[serde(try_from = "String")]
-pub struct ItemID(String);
+pub struct ItemID(pub String);
 
 impl std::convert::TryFrom<String> for ItemID {
     type Error = String;
@@ -84,11 +83,11 @@ impl std::convert::TryFrom<String> for ItemID {
     }
 }
 
-/// Color ID according to the Bricklink color catalog 
+/// Color ID according to the Bricklink color catalog
 /// https://www.bricklink.com/catalogColors.asp
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Hash)]
 #[serde(try_from = "i8")]
-pub struct Color(i8);
+pub struct Color(pub i8);
 
 impl std::convert::TryFrom<i8> for Color {
     type Error = String;
@@ -98,9 +97,9 @@ impl std::convert::TryFrom<i8> for Color {
 }
 
 /// Maximum Desired Price
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(try_from = "f32")]
-pub struct MaxPrice(f32);
+pub struct MaxPrice(pub f32);
 
 impl std::convert::TryFrom<f32> for MaxPrice {
     type Error = String;
@@ -110,9 +109,9 @@ impl std::convert::TryFrom<f32> for MaxPrice {
 }
 
 /// Minimum desired quantity
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(try_from = "i32")]
-pub struct MinQty(i32);
+pub struct MinQty(pub i32);
 
 impl std::convert::TryFrom<i32> for MinQty {
     type Error = String;
@@ -122,9 +121,9 @@ impl std::convert::TryFrom<i32> for MinQty {
 }
 
 /// Quantity of the item you already have
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(try_from = "i32")]
-pub struct QtyFilled(i32);
+pub struct QtyFilled(pub i32);
 
 impl std::convert::TryFrom<i32> for QtyFilled {
     type Error = String;
@@ -134,14 +133,14 @@ impl std::convert::TryFrom<i32> for QtyFilled {
 }
 
 /// Item condition
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub enum Condition {
-    New, 
-    Used, 
-    Complete, 
-    Incomplete, 
-    Sealed
+    New,
+    Used,
+    Complete,
+    Incomplete,
+    Sealed,
 }
 
 impl std::convert::TryFrom<String> for Condition {
@@ -153,15 +152,15 @@ impl std::convert::TryFrom<String> for Condition {
             "C" => return Ok(Self::Complete),
             "I" => return Ok(Self::Incomplete),
             "S" => return Ok(Self::Sealed),
-            unsupported =>  Err(format!("{} is not a supported Condition!", unsupported))
+            unsupported => Err(format!("{} is not a supported Condition!", unsupported)),
         }
     }
 }
 
 /// Notes on the item
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
-pub struct Remarks(String);
+pub struct Remarks(pub String);
 
 impl std::convert::TryFrom<String> for Remarks {
     type Error = String;
@@ -171,11 +170,11 @@ impl std::convert::TryFrom<String> for Remarks {
 }
 
 /// Be notified when these items are listed for sale
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub enum Notify {
-	Y,
-	N
+    Y,
+    N,
 }
 
 impl std::convert::TryFrom<String> for Notify {
@@ -184,17 +183,17 @@ impl std::convert::TryFrom<String> for Notify {
         match notify_str.as_str() {
             "Y" => return Ok(Self::Y),
             "N" => return Ok(Self::N),
-            unsupported =>  Err(format!("{} is not a supported Notify!", unsupported))
+            unsupported => Err(format!("{} is not a supported Notify!", unsupported)),
         }
     }
 }
 
-/// Show in items for sale queries? 
-#[derive(Debug, Deserialize)]
+/// Show in items for sale queries?
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub enum WantedShow {
-	Y, 
-	N
+    Y,
+    N,
 }
 
 impl std::convert::TryFrom<String> for WantedShow {
@@ -203,13 +202,13 @@ impl std::convert::TryFrom<String> for WantedShow {
         match wantedshow_str.as_str() {
             "Y" => return Ok(Self::Y),
             "N" => return Ok(Self::N),
-            unsupported =>  Err(format!("{} is not a supported Notify!", unsupported))
+            unsupported => Err(format!("{} is not a supported Notify!", unsupported)),
         }
     }
 }
 
 /// ID of wanted list
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub struct WantedListID(String);
 
