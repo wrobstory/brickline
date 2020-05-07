@@ -12,7 +12,7 @@ pub struct Inventory {
 }
 
 /// A single Lego Item
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Item {
     #[serde(rename = "ITEMTYPE")]
     pub item_type: ItemType,
@@ -38,8 +38,43 @@ pub struct Item {
     pub wanted_list_id: Option<WantedListID>,
 }
 
+impl Item {
+    /// Build a test Item with item_type, item_id, color, and all other fields set to
+    /// None. Only used as a test data generator.
+    /// # Arguments
+    ///
+    /// * `item_type` - ItemType
+    /// * `item_id` - ItemID
+    /// * `color` - Color
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let test_item = Item::build_test_item(
+    ///     ItemType::Part,
+    ///     ItemID(String::from("3622")),
+    ///     Some(Color(11)),
+    /// );
+    /// ```
+    pub fn build_test_item(item_type: ItemType, item_id: ItemID, color: Option<Color>) -> Item {
+        Item {
+            item_type,
+            item_id,
+            color,
+            max_price: None,
+            min_qty: None,
+            qty_filled: None,
+            condition: None,
+            remarks: None,
+            notify: None,
+            wanted_show: None,
+            wanted_list_id: None,
+        }
+    }
+}
+
 /// The type of the Lego Item
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub enum ItemType {
     Set,
@@ -72,7 +107,7 @@ impl std::convert::TryFrom<String> for ItemType {
 }
 
 /// The canonical Lego catalog item number
-#[derive(Debug, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
 #[serde(try_from = "String")]
 pub struct ItemID(pub String);
 
@@ -85,7 +120,7 @@ impl std::convert::TryFrom<String> for ItemID {
 
 /// Color ID according to the Bricklink color catalog
 /// https://www.bricklink.com/catalogColors.asp
-#[derive(Debug, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
 #[serde(try_from = "i8")]
 pub struct Color(pub i8);
 
@@ -97,7 +132,7 @@ impl std::convert::TryFrom<i8> for Color {
 }
 
 /// Maximum Desired Price
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "f32")]
 pub struct MaxPrice(pub f32);
 
@@ -109,7 +144,7 @@ impl std::convert::TryFrom<f32> for MaxPrice {
 }
 
 /// Minimum desired quantity
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "i32")]
 pub struct MinQty(pub i32);
 
@@ -121,7 +156,7 @@ impl std::convert::TryFrom<i32> for MinQty {
 }
 
 /// Quantity of the item you already have
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "i32")]
 pub struct QtyFilled(pub i32);
 
@@ -133,7 +168,7 @@ impl std::convert::TryFrom<i32> for QtyFilled {
 }
 
 /// Item condition
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub enum Condition {
     New,
@@ -158,7 +193,7 @@ impl std::convert::TryFrom<String> for Condition {
 }
 
 /// Notes on the item
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub struct Remarks(pub String);
 
@@ -170,7 +205,7 @@ impl std::convert::TryFrom<String> for Remarks {
 }
 
 /// Be notified when these items are listed for sale
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub enum Notify {
     Y,
@@ -189,7 +224,7 @@ impl std::convert::TryFrom<String> for Notify {
 }
 
 /// Show in items for sale queries?
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub enum WantedShow {
     Y,
@@ -208,7 +243,7 @@ impl std::convert::TryFrom<String> for WantedShow {
 }
 
 /// ID of wanted list
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "String")]
 pub struct WantedListID(String);
 
