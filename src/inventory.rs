@@ -2,6 +2,9 @@
 //!
 //! These types are all based on the Bricklink
 //! XML schema as described here: https://www.bricklink.com/help.asp?helpID=207
+//! 
+//! All of the impl std::convert::TryFrom<N> for T logic is a workaround for
+//! deserialization of XML to enum. 
 
 use serde::Deserialize;
 /// The top level inventory that will hold a vector of Items
@@ -41,6 +44,7 @@ pub struct Item {
 impl Item {
     /// Build a test Item with item_type, item_id, color, and all other fields set to
     /// None. Only used as a test data generator.
+    ///
     /// # Arguments
     ///
     /// * `item_type` - ItemType
@@ -88,6 +92,7 @@ pub enum ItemType {
     UnsortedLot,
 }
 
+/// Workaround for deserialization from XML to enum
 impl std::convert::TryFrom<String> for ItemType {
     type Error = String;
     fn try_from(itemtype_str: String) -> Result<Self, Self::Error> {
