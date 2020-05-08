@@ -5,7 +5,7 @@
 
 pub mod inventory;
 
-use crate::inventory::{Color, Inventory, Item, ItemID, QtyFilled};
+use crate::inventory::{Color, Inventory, Item, ItemID, MinQty};
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -71,19 +71,18 @@ fn build_item_color_hashmap(inventory: &Inventory) -> HashMap<ItemColorHashKey, 
         })
 }
 
-fn increment_item<'a>(item_to_increment: &'a mut Item, incrementing_item: &Item) -> &'a Item {
-    let incrementing_qty_filled = match &incrementing_item.qty_filled {
+fn increment_item(item_to_increment: &mut Item, incrementing_item: &Item) -> () {
+    let incrementing_min_qty = match &incrementing_item.min_qty {
         Some(qty) => qty.0,
         None => 1,
     };
 
-    match &item_to_increment.qty_filled {
+    match &item_to_increment.min_qty {
         Some(qty) => {
-            item_to_increment.qty_filled = Some(QtyFilled(qty.0 + incrementing_qty_filled))
+            item_to_increment.min_qty = Some(MinQty(qty.0 + incrementing_min_qty))
         }
-        None => item_to_increment.qty_filled = Some(QtyFilled(incrementing_qty_filled)),
+        None => item_to_increment.min_qty = Some(MinQty(incrementing_min_qty)),
     }
-    item_to_increment
 }
 
 fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory) -> Inventory {
