@@ -5,7 +5,7 @@
 
 pub mod inventory;
 
-use crate::inventory::{Color, Inventory, Item, ItemID, ItemType};
+use crate::inventory::{Color, Inventory, Item, ItemID, QtyFilled};
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -21,6 +21,9 @@ use std::path::PathBuf;
 /// # Example
 ///
 /// ```
+/// use std::path::PathBuf;
+/// use bricktools::xml_to_string;
+///
 /// let path = PathBuf::from("/home/user/path/to/file.xml");
 /// let xml_string = xml_to_string(&path);
 /// ```
@@ -31,25 +34,28 @@ pub fn xml_to_string(file_path: &PathBuf) -> Result<String, IOError> {
     Ok(xml_string)
 }
 
-/// Given an Inventory, build a HashMap of each Inventory Item where 
-/// the hash key is the ItemID and Color combination for the Item. 
+/// Given an Inventory, build a HashMap of each Inventory Item where
+/// the hash key is the ItemID and Color combination for the Item.
+/// Note: we explicitly .clone the Item for this map, as we're going to
+/// use it as the base case for our merged list.
 ///
 /// # Arguments
 ///
 /// * `inventory`: Bricklink inventory as deserialized from XML
 ///
-/// # Example
+/// Example
 ///
-/// ```
+///
+/// use bricktools::{xml_to_string, build_item_color_hashmap};
 /// use quick_xml::de::from_str;
 /// use std::path::PathBuf;
-/// 
+///
 /// let path = PathBuf::from("/home/user/path/to/file.xml");
 /// let xml_string = xml_to_string(&path).unwrap();
 /// let inventory = from_str(&xml_string).unwrap();
-/// let hm = build_item_color_hashmap(&inventory);
-/// ```
-fn build_item_color_hashmap(inventory: &Inventory) -> HashMap<ItemColorHashKey, &Item> {
+/// let hm = self::build_item_color_hashmap(&inventory);
+///
+fn build_item_color_hashmap(inventory: &Inventory) -> HashMap<ItemColorHashKey, Item> {
     inventory
         .items
         .iter()
@@ -58,12 +64,57 @@ fn build_item_color_hashmap(inventory: &Inventory) -> HashMap<ItemColorHashKey, 
                 item_id: &item.item_id,
                 color: &item.color,
             };
-            acc.insert(item_color_key, item);
+            // Cloning here as we're going to mutate these
+            // Items to combine them with other lists
+            acc.insert(item_color_key, item.clone());
             acc
         })
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+fn increment_item<'a>(item_to_increment: &'a mut Item, incrementing_item: &Item) -> &'a Item {
+    let incrementing_qty_filled = match &incrementing_item.qty_filled {
+        Some(qty) => qty.0,
+        None => 1,
+    };
+
+    match &item_to_increment.qty_filled {
+        Some(qty) => {
+            item_to_increment.qty_filled = Some(QtyFilled(qty.0 + incrementing_qty_filled))
+        }
+        None => item_to_increment.qty_filled = Some(QtyFilled(incrementing_qty_filled)),
+    }
+    item_to_increment
+}
+
+fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory) -> Inventory {
+    let (long_inv, short_inv) = if left_inventory.items.len() > right_inventory.items.len() {
+        (left_inventory, right_inventory)
+    } else {
+        (right_inventory, left_inventory)
+    };
+
+    let mut long_inv_map = build_item_color_hashmap(long_inv);
+    short_inv
+        .items
+        .iter()
+        .fold(&mut long_inv_map, |acc, short_item| {
+            let item_color_key = ItemColorHashKey {
+                item_id: &short_item.item_id,
+                color: &short_item.color,
+            };
+            if let Some(long_item) = acc.get_mut(&item_color_key) {
+                increment_item(long_item, short_item);
+            } else {
+                acc.insert(item_color_key, short_item.clone());
+            }
+            acc
+        });
+    Inventory {
+        items: long_inv_map.values().cloned().collect(),
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct ItemColorHashKey<'a> {
     item_id: &'a ItemID,
     color: &'a Option<Color>,
@@ -73,6 +124,7 @@ struct ItemColorHashKey<'a> {
 mod tests {
 
     use super::*;
+    use crate::inventory::ItemType;
 
     #[test]
     fn test_build_item_color_hashmap() {
@@ -99,7 +151,8 @@ mod tests {
             item_id: &ItemID(String::from("3039")),
             color: &None,
         };
-        assert_eq!(hm.get(&key_1), Some(&&item_1a));
-        assert_eq!(hm.get(&key_2), Some(&&item_2a));
+        println!("IS IT TRUE: {}", key_1 > key_2);
+        assert_eq!(hm.get(&key_1), Some(&item_1a));
+        assert_eq!(hm.get(&key_2), Some(&item_2a));
     }
 }

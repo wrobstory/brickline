@@ -2,9 +2,9 @@
 //!
 //! These types are all based on the Bricklink
 //! XML schema as described here: https://www.bricklink.com/help.asp?helpID=207
-//! 
+//!
 //! All of the impl std::convert::TryFrom<N> for T logic is a workaround for
-//! deserialization of XML to enum. 
+//! deserialization of XML to enum.
 
 use serde::Deserialize;
 /// The top level inventory that will hold a vector of Items
@@ -54,6 +54,8 @@ impl Item {
     /// # Example
     ///
     /// ```
+    /// use bricktools::inventory::{Item, ItemType, ItemID, Color};
+    ///
     /// let test_item = Item::build_test_item(
     ///     ItemType::Part,
     ///     ItemID(String::from("3622")),
@@ -112,7 +114,7 @@ impl std::convert::TryFrom<String> for ItemType {
 }
 
 /// The canonical Lego catalog item number
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash, PartialOrd, Ord)]
 #[serde(try_from = "String")]
 pub struct ItemID(pub String);
 
@@ -125,7 +127,7 @@ impl std::convert::TryFrom<String> for ItemID {
 
 /// Color ID according to the Bricklink color catalog
 /// https://www.bricklink.com/catalogColors.asp
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash, PartialOrd, Ord)]
 #[serde(try_from = "i8")]
 pub struct Color(pub i8);
 
