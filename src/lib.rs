@@ -71,6 +71,25 @@ fn build_item_color_hashmap(inventory: &Inventory) -> HashMap<ItemColorHashKey, 
         })
 }
 
+/// Given two items, add the MinQty of the righthand (incrementing) Item to the
+/// lefthand (to-be-incremented) Item. The lefthand item_to_increment *will*
+/// be mutated.
+///
+/// # Arguments
+///
+/// * `item_to_increment`: Item to be incremented
+/// * `incrementing_item`: Item to increment from
+///
+/// Example
+///
+/// use bricktools::increment_item;
+/// use bricktools::inventory::Item;
+///
+/// let mut left_item = Item::build_test_item(ItemType::Part, ItemID(String::from("3039")), Some(Color(5)), Some(MinQty(20)));
+/// let right_item = Item::build_test_item(ItemType::Part, ItemID(String::from("3039")), Some(Color(5)), Some(MinQty(10)));
+
+/// increment_item(&mut left_item, &right_item);
+///
 fn increment_item(item_to_increment: &mut Item, incrementing_item: &Item) -> () {
     let incrementing_min_qty = match &incrementing_item.min_qty {
         Some(qty) => qty.0,
@@ -78,38 +97,30 @@ fn increment_item(item_to_increment: &mut Item, incrementing_item: &Item) -> () 
     };
 
     match &item_to_increment.min_qty {
-        Some(qty) => {
-            item_to_increment.min_qty = Some(MinQty(qty.0 + incrementing_min_qty))
-        }
+        Some(qty) => item_to_increment.min_qty = Some(MinQty(qty.0 + incrementing_min_qty)),
         None => item_to_increment.min_qty = Some(MinQty(incrementing_min_qty)),
     }
 }
 
 fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory) -> Inventory {
-    let (long_inv, short_inv) = if left_inventory.items.len() > right_inventory.items.len() {
-        (left_inventory, right_inventory)
-    } else {
-        (right_inventory, left_inventory)
-    };
-
-    let mut long_inv_map = build_item_color_hashmap(long_inv);
-    short_inv
+    let mut left_inv_map = build_item_color_hashmap(left_inventory);
+    right_inventory
         .items
         .iter()
-        .fold(&mut long_inv_map, |acc, short_item| {
+        .fold(&mut left_inv_map, |acc, right_item| {
             let item_color_key = ItemColorHashKey {
-                item_id: &short_item.item_id,
-                color: &short_item.color,
+                item_id: &right_item.item_id,
+                color: &right_item.color,
             };
-            if let Some(long_item) = acc.get_mut(&item_color_key) {
-                increment_item(long_item, short_item);
+            if let Some(left_item) = acc.get_mut(&item_color_key) {
+                increment_item(left_item, right_item);
             } else {
-                acc.insert(item_color_key, short_item.clone());
+                acc.insert(item_color_key, right_item.clone());
             }
             acc
         });
     Inventory {
-        items: long_inv_map.values().cloned().collect(),
+        items: left_inv_map.values().cloned().collect(),
     }
 }
 
@@ -131,12 +142,18 @@ mod tests {
             ItemType::Part,
             ItemID(String::from("3622")),
             Some(Color(11)),
+            None,
         );
         let item_1a = item_1.clone();
-        let item_2 = Item::build_test_item(ItemType::Part, ItemID(String::from("3039")), None);
+        let item_2 =
+            Item::build_test_item(ItemType::Part, ItemID(String::from("3039")), None, None);
         let item_2a = item_2.clone();
-        let item_3 =
-            Item::build_test_item(ItemType::Part, ItemID(String::from("3001")), Some(Color(5)));
+        let item_3 = Item::build_test_item(
+            ItemType::Part,
+            ItemID(String::from("3001")),
+            Some(Color(5)),
+            None,
+        );
         let inventory = Inventory {
             items: vec![item_1, item_2, item_3],
         };
@@ -150,8 +167,63 @@ mod tests {
             item_id: &ItemID(String::from("3039")),
             color: &None,
         };
-        println!("IS IT TRUE: {}", key_1 > key_2);
         assert_eq!(hm.get(&key_1), Some(&item_1a));
         assert_eq!(hm.get(&key_2), Some(&item_2a));
+    }
+
+    #[test]
+
+    fn test_increment_item_with_righthand_min_qty() {
+        let mut left_item = Item::build_test_item(
+            ItemType::Part,
+            ItemID(String::from("3039")),
+            Some(Color(5)),
+            Some(MinQty(20)),
+        );
+        let right_item = Item::build_test_item(
+            ItemType::Part,
+            ItemID(String::from("3039")),
+            Some(Color(5)),
+            Some(MinQty(10)),
+        );
+
+        increment_item(&mut left_item, &right_item);
+        assert_eq!(left_item.min_qty.unwrap().0, 30);
+    }
+
+    fn test_increment_item_with_no_righthand_min_qty() {
+        let mut left_item = Item::build_test_item(
+            ItemType::Part,
+            ItemID(String::from("3039")),
+            Some(Color(5)),
+            Some(MinQty(20)),
+        );
+        let right_item = Item::build_test_item(
+            ItemType::Part,
+            ItemID(String::from("3039")),
+            Some(Color(5)),
+            None,
+        );
+
+        increment_item(&mut left_item, &right_item);
+        assert_eq!(left_item.min_qty.unwrap().0, 21);
+    }
+
+    fn test_increment_item_with_no_min_qty() {
+        let mut left_item = Item::build_test_item(
+            ItemType::Part,
+            ItemID(String::from("3039")),
+            Some(Color(5)),
+            None,
+        );
+        let right_item = Item::build_test_item(
+            ItemType::Part,
+            ItemID(String::from("3039")),
+            Some(Color(5)),
+            None,
+        );
+
+        increment_item(&mut left_item, &right_item);
+        assert_eq!(left_item.min_qty.unwrap().0, 2);
     }
 }

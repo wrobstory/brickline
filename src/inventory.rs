@@ -60,15 +60,21 @@ impl Item {
     ///     ItemType::Part,
     ///     ItemID(String::from("3622")),
     ///     Some(Color(11)),
+    ///     None
     /// );
     /// ```
-    pub fn build_test_item(item_type: ItemType, item_id: ItemID, color: Option<Color>) -> Item {
+    pub fn build_test_item(
+        item_type: ItemType,
+        item_id: ItemID,
+        color: Option<Color>,
+        min_qty: Option<MinQty>,
+    ) -> Item {
         Item {
             item_type,
             item_id,
             color,
+            min_qty,
             max_price: None,
-            min_qty: None,
             qty_filled: None,
             condition: None,
             remarks: None,
