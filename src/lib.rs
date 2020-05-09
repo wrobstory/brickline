@@ -7,7 +7,7 @@ pub mod inventory;
 
 use crate::inventory::{Color, Inventory, Item, ItemID, MinQty};
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{Error as IOError, Read};
 use std::path::PathBuf;
@@ -55,11 +55,11 @@ pub fn xml_to_string(file_path: &PathBuf) -> Result<String, IOError> {
 /// let inventory = from_str(&xml_string).unwrap();
 /// let hm = self::build_item_color_hashmap(&inventory);
 ///
-fn build_item_color_hashmap(inventory: &Inventory) -> HashMap<ItemColorHashKey, Item> {
+fn build_item_color_hashmap(inventory: &Inventory) -> BTreeMap<ItemColorHashKey, Item> {
     inventory
         .items
         .iter()
-        .fold(HashMap::new(), |mut acc, item| {
+        .fold(BTreeMap::new(), |mut acc, item| {
             let item_color_key = ItemColorHashKey {
                 item_id: &item.item_id,
                 color: &item.color,
@@ -98,11 +98,11 @@ fn increment_item(item_to_increment: &mut Item, incrementing_item: &Item) -> () 
 
     match &item_to_increment.min_qty {
         Some(qty) => item_to_increment.min_qty = Some(MinQty(qty.0 + incrementing_min_qty)),
-        None => item_to_increment.min_qty = Some(MinQty(incrementing_min_qty)),
+        None => item_to_increment.min_qty = Some(MinQty(1 + incrementing_min_qty)),
     }
 }
 
-fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory) -> Inventory {
+pub fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory) -> Inventory {
     let mut left_inv_map = build_item_color_hashmap(left_inventory);
     right_inventory
         .items
@@ -172,7 +172,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_increment_item_with_righthand_min_qty() {
         let mut left_item = Item::build_test_item(
             ItemType::Part,
@@ -191,6 +190,7 @@ mod tests {
         assert_eq!(left_item.min_qty.unwrap().0, 30);
     }
 
+    #[test]
     fn test_increment_item_with_no_righthand_min_qty() {
         let mut left_item = Item::build_test_item(
             ItemType::Part,
@@ -209,6 +209,7 @@ mod tests {
         assert_eq!(left_item.min_qty.unwrap().0, 21);
     }
 
+    #[test]
     fn test_increment_item_with_no_min_qty() {
         let mut left_item = Item::build_test_item(
             ItemType::Part,
