@@ -4,10 +4,6 @@ use bricktools::inventory::{
     Color, Condition, Inventory, Item, ItemID, ItemType, MaxPrice, MinQty, Notify, QtyFilled,
     Remarks,
 };
-use bricktools::xml_to_string;
-
-use quick_xml::de::from_str;
-use std::path::PathBuf;
 
 mod common;
 

@@ -102,6 +102,38 @@ fn increment_item(item_to_increment: &mut Item, incrementing_item: &Item) -> () 
     }
 }
 
+/// Given two Inventories, merge the right inventory into the left one.
+/// Here's how the merge happens:
+/// 1. Build hash table from left inventory
+/// 2. Iterate through right inventory and probe table for ItemId/Color keys
+/// 3. If a key is found, add the MinQty of the right inventory to the left.
+///    NOTE: The metadata from the *left* inventory is retained. There is no
+///    other metadata merging other than MinQty.
+/// 4. If no key is found, add the Item from the right inventory to the hash table
+/// 5. Convert the .values() of the hash table into .items of a new Inventory
+///
+/// # Arguments
+///
+/// * `left_inventory`: Inventory to be merged into
+/// * `right_inventory`: Inventory to merge into left inventory
+///
+/// Example
+///
+/// use bricktools::merge_inventories;
+/// use bricktools::inventory::{Inventory, Item};
+///
+/// let item = Item::build_test_item(
+///       ItemType::Part,
+///       ItemID(String::from("3039")),
+///       Some(Color(5)),
+///       Some(MinQty(20)),
+/// );
+///
+/// let left_inventory = Inventory { items: vec![item] };
+/// let right_inventory = Inventory { items: vec![item] };
+///
+/// let merged_inventory = merge_inventories(left_inventory, right_inventory);
+///
 pub fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory) -> Inventory {
     let mut left_inv_map = build_item_color_hashmap(left_inventory);
     right_inventory
