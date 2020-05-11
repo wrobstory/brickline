@@ -12,6 +12,15 @@ use std::fs::File;
 use std::io::{Error as IOError, Read};
 use std::path::PathBuf;
 
+use clap::{Arg, App};
+
+/// The primary key of an Inventory Item
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+struct ItemColorHashKey<'a> {
+    item_id: &'a ItemID,
+    color: &'a Option<Color>,
+}
+
 /// Given a path to an XML file, load that file to a String
 ///
 /// # Arguments
@@ -156,10 +165,34 @@ pub fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-struct ItemColorHashKey<'a> {
-    item_id: &'a ItemID,
-    color: &'a Option<Color>,
+/// CLI Tooling
+
+fn main() {
+    let commands = App::new("Bricktools")
+        .version("0.1")
+        .author("Rob Story")
+        .about("Bricklink wanted list helper tools")
+        .subcommand(App::new("merge")
+            .about("Merges two Bricklink wanted lists")
+            .arg(Arg::with_name("left")
+                .short('l')
+                .required(true)
+                .takes_value(true)
+                .about("Path to lefthand wanted list, will have right merged into it"))
+            .arg(Arg::with_name("right")
+                .short('r')
+                .required(true)
+                .takes_value(true)
+                .about("Path to righthand wanted list, will be merged into left")))
+        .get_matches();
+
+    match commands.subcommand() {
+        ("merge", Some(merge_args)) => {
+            println!("LEFT! {:?}", merge_args.value_of("left"));
+            println!("RIGHT {:?}", merge_args.value_of("right"));
+        }
+        _ => ()
+    }
 }
 
 #[cfg(test)]
