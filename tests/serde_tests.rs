@@ -1,9 +1,10 @@
 extern crate bricktools;
 
 use bricktools::inventory::{
-    Color, Condition, Inventory, Item, ItemID, ItemType, MaxPrice, MinQty, Notify, QtyFilled,
+    Color, Condition, SerdeInventory, Inventory, Item, ItemID, ItemType, MaxPrice, MinQty, Notify, QtyFilled,
     Remarks,
 };
+use quick_xml::se::to_string;
 
 mod common;
 
@@ -59,5 +60,26 @@ mod tests {
         let items = vec![item_1, item_2, item_3];
         let expected_inventory = Inventory { items: items };
         assert_eq!(bricklink_inventory, expected_inventory);
+    }
+
+    #[test]
+    fn test_inventory_to_string() {
+        let item_1 = Item {
+            item_type: ItemType::Part,
+            item_id: ItemID(String::from("3622")),
+            color: Some(Color(11)),
+            max_price: None,
+            min_qty: None,
+            qty_filled: Some(QtyFilled(4)),
+            condition: None,
+            remarks: None,
+            notify: None,
+            wanted_show: None,
+            wanted_list_id: None,
+        };
+        let items = vec![item_1];
+        let serde_inventory = SerdeInventory::from(Inventory { items: items });
+        let stringified = to_string(&serde_inventory).unwrap();
+        assert_eq!(String::from("foo"), stringified);
     }
 }

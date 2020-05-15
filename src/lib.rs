@@ -1,6 +1,6 @@
 pub mod inventory;
 
-use crate::inventory::{Color, Inventory, Item, ItemID, MinQty};
+use crate::inventory::{Color, SerdeInventory, Inventory, Item, ItemID, MinQty};
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -42,8 +42,8 @@ pub fn xml_to_string(file_path: &PathBuf) -> Result<String, IOError> {
 pub fn resource_name_to_inventory(resource_path: &str) -> Result<Inventory, IOError> {
     let resource_path = PathBuf::from(resource_path);
     let resource_str = xml_to_string(&resource_path)?;
-    match from_str(&resource_str) {
-        Ok(inventory) => Ok(inventory),
+    match from_str::<SerdeInventory>(&resource_str) {
+        Ok(serde_inventory) => Ok(Inventory::from(serde_inventory)),
         Err(e) => Err(IOError::new(ErrorKind::InvalidInput, e)),
     }
 }

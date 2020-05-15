@@ -1,4 +1,4 @@
-use bricktools::inventory::Inventory;
+use bricktools::inventory::{SerdeInventory, Inventory};
 use bricktools::xml_to_string;
 
 use quick_xml::de::from_str;
@@ -20,5 +20,5 @@ fn get_resource_path(resource_name: &str) -> PathBuf {
 pub fn resource_name_to_inventory(resource_name: &str) -> Inventory {
     let resource_path = get_resource_path(resource_name);
     let resource_str = xml_to_string(&resource_path).unwrap();
-    from_str(&resource_str).unwrap()
+    Inventory::from(from_str::<SerdeInventory>(&resource_str).unwrap())
 }
