@@ -1,6 +1,6 @@
 pub mod inventory;
 
-use crate::inventory::{Color, SerdeInventory, Inventory, Item, ItemID, MinQty};
+use crate::inventory::{Color, Inventory, Item, ItemID, MinQty, SerdeInventory};
 
 use std::collections::BTreeMap;
 use std::fs::File;
