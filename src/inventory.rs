@@ -3,14 +3,19 @@
 //! These types are all based on the Bricklink
 //! XML schema as described here: https://www.bricklink.com/help.asp?helpID=207
 //!
-//! All of the impl std::convert::TryFrom<N> for T logic is a workaround for
-//! deserialization of XML to enum.
-
+//! So what's going on here? The quick_xml library has relatively limited support 
+//! for complex types, and Rust doesn't have good support for a serializable decimel
+//! type. So between those two things we've ended up with SerdeInventory and SerdeItem, 
+//! top level structs that only use primitive types. We then iterate over the entire
+//! list of items and do a bunch of From/Into transformations to go from our primitive
+//! types to more complex ones. It's a bummer, but I don't expect to ever have Bricklink
+//! wanted lists longer than O(thousands) of Items, so I'm willing to take perf hit
+//! to do the full scan for deserialization/serialization. 
 use quick_xml::se::to_string;
 use quick_xml::DeError;
 use serde::{Deserialize, Serialize};
 
-/// The top level inventory that will hold a vector of Items
+/// The serde inventory of SerdeItems
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename(serialize = "INVENTORY"))]
 pub struct SerdeInventory {
@@ -19,6 +24,35 @@ pub struct SerdeInventory {
 }
 
 impl SerdeInventory {
+    /// Dirty fix for a serialization issue with the quick_xml library. 
+    /// When we try to serialize a Vec<SerdeItem>, we end up with 
+    /// <ITEM><ITEM>...</ITEM></ITEM> at the beginning and end of the 
+    /// vectors. So...we're going to straight up remove the redundant
+    /// Items by replacing those ranges in the String. 
+    /// 
+    ///
+    /// # Arguments
+    ///
+    /// * `serde_string`: Serialized String of a SerdeInventory
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use quick_xml::se::to_string;
+    /// use bricktools::inventory::{Inventory, SerdeInventory, Item, ItemType,
+    ///                             ItemID, Color};
+    ///
+    /// let test_item = Item::build_test_item(
+    ///     ItemType::Part,
+    ///     ItemID(String::from("3622")),
+    ///     Some(Color(11)),
+    ///     None
+    /// );
+    /// let inventory = Inventory { items: vec![test_item]};
+    /// let serde_inventory = SerdeInventory::from(inventory);
+    /// let stringified = to_string(&serde_inventory).unwrap();
+    /// let repaired = SerdeInventory::repair_serialized_string(stringified);
+    /// ```
     pub fn repair_serialized_string(mut serde_string: String) -> String {
         serde_string.replace_range(11..17, "");
         let end_bound_1 = serde_string.len() - 19;
@@ -28,13 +62,25 @@ impl SerdeInventory {
     }
 }
 
+/// A Bricklink Inventory
 #[derive(Debug, PartialEq)]
 pub struct Inventory {
     pub items: Vec<Item>,
 }
 
+/// Serialize an Inventory to an XML String
 impl std::convert::TryFrom<Inventory> for String {
     type Error = DeError;
+
+    /// Given an Inventory, convert it to an XML string. 
+    /// This will go through the SerdeInventory type as well as
+    /// apply some of the ad-hoc fixes needed to make it a valid
+    /// XML string. 
+    ///
+    /// # Arguments
+    ///
+    /// * `inventory`: Bricklink Inventory
+    /// ```
     fn try_from(inventory: Inventory) -> Result<Self, Self::Error> {
         let serde_inventory = SerdeInventory::from(inventory);
         let stringified = to_string(&serde_inventory)?;
@@ -66,7 +112,7 @@ impl std::convert::From<Inventory> for SerdeInventory {
     }
 }
 
-/// A single Lego Item
+/// A serde representation of an Item
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename(serialize = "ITEM"))]
 pub struct SerdeItem {
@@ -213,7 +259,6 @@ pub enum ItemType {
     UnsortedLot,
 }
 
-/// Workaround for deserialization from XML to enum
 impl std::convert::From<String> for ItemType {
     fn from(itemtype_str: String) -> ItemType {
         match itemtype_str.as_str() {
@@ -288,7 +333,7 @@ impl std::convert::From<String> for MaxPrice {
     fn from(input_string: String) -> MaxPrice {
          match input_string.parse::<f32>() {
             Ok(max_price) => return Self(max_price),
-            Err(e) => panic!("Could not parse MaxPrice {}", input_string)
+            Err(_e) => panic!("Could not parse MaxPrice {}", input_string)
         };
     }
 }
