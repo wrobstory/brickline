@@ -19,12 +19,53 @@ pub struct ItemColorHashKey<'a> {
     color: &'a Option<Color>,
 }
 
-fn input(message: &str) -> Result<String, std::io::Error> {
+/// Get user input from stdout
+///
+/// # Arguments
+///
+/// * `message`: What message do you want to prompt the user with?
+///
+fn stdout_input(message: &str) -> Result<String, std::io::Error> {
     print!("{}", message);
     std::io::stdout().flush()?;
     let mut buf = String::new();
     std::io::stdin().read_line(&mut buf)?;
     Ok(buf)
+}
+
+/// Write a file. If the file already exists, prompt the user to ask
+/// if they want to overwrite it.
+///
+/// # Arguments
+///
+/// * `file_path`: Path to file to write
+/// * `content`: File content to write
+///
+fn write_file_with_overwrite_prompt(
+    file_path: &PathBuf,
+    content: &String,
+) -> Result<(), std::io::Error> {
+    if file_path.exists() {
+        let msg = format!(
+            "The file {} already exists. Do you want to overwrite this file? ",
+            file_path.to_str().unwrap()
+        );
+        let overwrite = stdout_input(&msg)?;
+        let lower = overwrite.to_lowercase();
+        let trimmed = lower.trim();
+        if trimmed != "y" && trimmed != "yes" {
+            println!("Exited without writing file");
+            std::process::exit(0x0100);
+        }
+    }
+
+    let mut file = File::create(file_path)?;
+    println!(
+        "Writing merged wanted list to {}",
+        file_path.to_str().unwrap()
+    );
+    file.write_all(content.as_bytes())?;
+    Ok(())
 }
 
 /// Given a path to an XML file, load that file to a String
@@ -49,8 +90,20 @@ pub fn xml_to_string(file_path: &PathBuf) -> Result<String, IOError> {
     Ok(xml_string)
 }
 
-pub fn resource_name_to_inventory(resource_path: &str) -> Result<Inventory, IOError> {
-    let resource_path = PathBuf::from(resource_path);
+/// Given a path to a file, read the file and deserialize it to an Inventory
+///
+/// # Arguments
+///
+/// * `file_path`: String path to file
+///
+/// Example
+///
+/// ```no_run
+/// use bricktools::file_to_inventory;
+///
+/// let inventory = file_to_inventory("/path/to/wanted_list.xml");
+pub fn file_to_inventory(file_path: &str) -> Result<Inventory, IOError> {
+    let resource_path = PathBuf::from(file_path);
     let resource_str = xml_to_string(&resource_path)?;
     match from_str::<SerdeInventory>(&resource_str) {
         Ok(serde_inventory) => Ok(Inventory::from(serde_inventory)),
@@ -183,6 +236,13 @@ pub fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory
     }
 }
 
+/// Given the arguments for the `merge` command, merge the two wanted lists,
+/// then write the result to the provided output path.
+///
+/// # Arguments
+///
+/// * `merge_args`: Arguments to the merge command
+///
 pub fn merge(merge_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     let left_path = merge_args.value_of("left").ok_or(IOError::new(
         ErrorKind::InvalidInput,
@@ -192,8 +252,8 @@ pub fn merge(merge_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
         ErrorKind::InvalidInput,
         "Empty right inventory path",
     ))?;
-    let left_inventory = resource_name_to_inventory(left_path)?;
-    let right_inventory = resource_name_to_inventory(right_path)?;
+    let left_inventory = file_to_inventory(left_path)?;
+    let right_inventory = file_to_inventory(right_path)?;
     println!("Left Bricklink Wanted List: {}", left_path);
     println!("Right Bricklink Wanted List: {}", right_path);
     println!("Merging wanted lists...");
@@ -204,23 +264,7 @@ pub fn merge(merge_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
         .value_of("output")
         .ok_or(IOError::new(ErrorKind::InvalidInput, "Empty output path"))?;
     let out_path = PathBuf::from(out_path_str);
-    if out_path.exists() {
-        let msg = format!(
-            "The file {} already exists. Do you want to overwrite this file? ",
-            out_path_str
-        );
-        let overwrite = input(&msg)?;
-        let lower = overwrite.to_lowercase();
-        let trimmed = lower.trim();
-        if trimmed != "y" && trimmed != "yes" {
-            println!("Exited without writing merged wanted list");
-            std::process::exit(0x0100);
-        }
-    }
-
-    let mut file = File::create(&out_path)?;
-    println!("Writing merged wanted list to {}", out_path_str);
-    file.write_all(xml_string.as_bytes())?;
+    write_file_with_overwrite_prompt(&out_path, &xml_string)?;
     Ok(())
 }
 
