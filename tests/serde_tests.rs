@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 
 use bricktools::inventory::{
     Color, Condition, Inventory, Item, ItemID, ItemType, MaxPrice, MinQty, Notify, QtyFilled,
-    Remarks
+    Remarks,
 };
 
 mod common;
@@ -145,7 +145,8 @@ mod tests {
             "test_inventory_2.xml",
             "test_inventory_3.xml",
         ]
-        .iter() {
+        .iter()
+        {
             let inventory = common::resource_name_to_inventory(resource_name);
             let stringified = String::try_from(inventory).unwrap();
             let expected_string = common::resource_name_to_string(resource_name);

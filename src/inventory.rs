@@ -3,14 +3,14 @@
 //! These types are all based on the Bricklink
 //! XML schema as described here: https://www.bricklink.com/help.asp?helpID=207
 //!
-//! So what's going on here? The quick_xml library has relatively limited support 
+//! So what's going on here? The quick_xml library has relatively limited support
 //! for complex types, and Rust doesn't have good support for a serializable decimel
-//! type. So between those two things we've ended up with SerdeInventory and SerdeItem, 
+//! type. So between those two things we've ended up with SerdeInventory and SerdeItem,
 //! top level structs that only use primitive types. We then iterate over the entire
 //! list of items and do a bunch of From/Into transformations to go from our primitive
 //! types to more complex ones. It's a bummer, but I don't expect to ever have Bricklink
 //! wanted lists longer than O(thousands) of Items, so I'm willing to take perf hit
-//! to do the full scan for deserialization/serialization. 
+//! to do the full scan for deserialization/serialization.
 use quick_xml::se::to_string;
 use quick_xml::DeError;
 use serde::{Deserialize, Serialize};
@@ -24,12 +24,12 @@ pub struct SerdeInventory {
 }
 
 impl SerdeInventory {
-    /// Dirty fix for a serialization issue with the quick_xml library. 
-    /// When we try to serialize a Vec<SerdeItem>, we end up with 
-    /// <ITEM><ITEM>...</ITEM></ITEM> at the beginning and end of the 
+    /// Dirty fix for a serialization issue with the quick_xml library.
+    /// When we try to serialize a Vec<SerdeItem>, we end up with
+    /// <ITEM><ITEM>...</ITEM></ITEM> at the beginning and end of the
     /// vectors. So...we're going to straight up remove the redundant
-    /// Items by replacing those ranges in the String. 
-    /// 
+    /// Items by replacing those ranges in the String.
+    ///
     ///
     /// # Arguments
     ///
@@ -73,10 +73,10 @@ pub struct Inventory {
 impl std::convert::TryFrom<Inventory> for String {
     type Error = DeError;
 
-    /// Given an Inventory, convert it to an XML string. 
+    /// Given an Inventory, convert it to an XML string.
     /// This will go through the SerdeInventory type as well as
     /// apply some of the ad-hoc fixes needed to make it a valid
-    /// XML string. 
+    /// XML string.
     ///
     /// # Arguments
     ///
@@ -332,9 +332,9 @@ pub struct MaxPrice(pub f32);
 
 impl std::convert::From<String> for MaxPrice {
     fn from(input_string: String) -> MaxPrice {
-         match input_string.parse::<f32>() {
+        match input_string.parse::<f32>() {
             Ok(max_price) => return Self(max_price),
-            Err(_e) => panic!("Could not parse MaxPrice {}", input_string)
+            Err(_e) => panic!("Could not parse MaxPrice {}", input_string),
         };
     }
 }
@@ -385,7 +385,7 @@ pub enum Condition {
     Complete,
     Incomplete,
     Sealed,
-    NotProvided
+    NotProvided,
 }
 
 impl std::convert::From<String> for Condition {
@@ -410,7 +410,7 @@ impl std::convert::From<Condition> for String {
             Condition::Complete => "C".to_string(),
             Condition::Incomplete => "I".to_string(),
             Condition::Sealed => "S".to_string(),
-            Condition::NotProvided => "X".to_string()
+            Condition::NotProvided => "X".to_string(),
         }
     }
 }

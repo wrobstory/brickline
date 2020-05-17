@@ -3,8 +3,10 @@ pub mod inventory;
 use crate::inventory::{Color, Inventory, Item, ItemID, MinQty, SerdeInventory};
 
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
+use std::error;
 use std::fs::File;
-use std::io::{Error as IOError, ErrorKind, Read};
+use std::io::{Error as IOError, ErrorKind, Read, Write};
 use std::path::PathBuf;
 
 use clap::ArgMatches;
@@ -12,9 +14,16 @@ use quick_xml::de::from_str;
 
 /// The primary key of an Inventory Item
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-struct ItemColorHashKey<'a> {
+pub struct ItemColorHashKey<'a> {
     item_id: &'a ItemID,
     color: &'a Option<Color>,
+}
+
+fn input(message: &str) -> Result<String, std::io::Error> {
+    print!("{}", message);
+    let mut buf = String::new();
+    std::io::stdin().read_to_string(&mut buf)?;
+    Ok(buf)
 }
 
 /// Given a path to an XML file, load that file to a String
@@ -59,17 +68,18 @@ pub fn resource_name_to_inventory(resource_path: &str) -> Result<Inventory, IOEr
 ///
 /// Example
 ///
-///
+/// ```no_run
 /// use bricktools::{xml_to_string, build_item_color_hashmap};
+/// use bricktools::inventory::{Inventory, SerdeInventory};
 /// use quick_xml::de::from_str;
 /// use std::path::PathBuf;
 ///
 /// let path = PathBuf::from("/home/user/path/to/file.xml");
 /// let xml_string = xml_to_string(&path).unwrap();
-/// let inventory = from_str(&xml_string).unwrap();
-/// let hm = self::build_item_color_hashmap(&inventory);
-///
-fn build_item_color_hashmap(inventory: &Inventory) -> BTreeMap<ItemColorHashKey, Item> {
+/// let inventory = Inventory::from(from_str::<SerdeInventory>(&xml_string).unwrap());
+/// let hm = build_item_color_hashmap(&inventory);
+/// ```
+pub fn build_item_color_hashmap(inventory: &Inventory) -> BTreeMap<ItemColorHashKey, Item> {
     inventory
         .items
         .iter()
@@ -133,8 +143,9 @@ fn increment_item(item_to_increment: &mut Item, incrementing_item: &Item) -> () 
 ///
 /// Example
 ///
+/// ```
 /// use bricktools::merge_inventories;
-/// use bricktools::inventory::{Inventory, Item};
+/// use bricktools::inventory::{Inventory, Item, ItemID, ItemType, Color, MinQty};
 ///
 /// let item = Item::build_test_item(
 ///       ItemType::Part,
@@ -142,12 +153,13 @@ fn increment_item(item_to_increment: &mut Item, incrementing_item: &Item) -> () 
 ///       Some(Color(5)),
 ///       Some(MinQty(20)),
 /// );
+/// let item_1 = item.clone();
 ///
 /// let left_inventory = Inventory { items: vec![item] };
-/// let right_inventory = Inventory { items: vec![item] };
+/// let right_inventory = Inventory { items: vec![item_1] };
 ///
-/// let merged_inventory = merge_inventories(left_inventory, right_inventory);
-///
+/// let merged_inventory = merge_inventories(&left_inventory, &right_inventory);
+/// ```
 pub fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory) -> Inventory {
     let mut left_inv_map = build_item_color_hashmap(left_inventory);
     right_inventory
@@ -170,20 +182,38 @@ pub fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory
     }
 }
 
-pub fn merge(merge_args: &ArgMatches) -> Result<(), IOError> {
+pub fn merge(merge_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     let left_path = merge_args.value_of("left").ok_or(IOError::new(
         ErrorKind::InvalidInput,
-        "Bad argument for left inventory path",
+        "Empty left inventory path",
     ))?;
     let right_path = merge_args.value_of("right").ok_or(IOError::new(
         ErrorKind::InvalidInput,
-        "Bad argument for right inventory path",
+        "Empty right inventory path",
     ))?;
     let left_inventory = resource_name_to_inventory(left_path)?;
     let right_inventory = resource_name_to_inventory(right_path)?;
+    println!("Left Bricklink Wanted List: {}", left_path);
+    println!("Right Bricklink Wanted List: {}", right_path);
+    println!("Merging wanted lists...");
     let merged_inventory = merge_inventories(&left_inventory, &right_inventory);
-    println!("Merged Inventory:");
-    println!("{:?}", merged_inventory);
+    let xml_string = String::try_from(merged_inventory)?;
+
+    let out_path_str = merge_args
+        .value_of("output")
+        .ok_or(IOError::new(ErrorKind::InvalidInput, "Empty output path"))?;
+    let out_path = PathBuf::from(out_path_str);
+    if out_path.exists() {
+        let overwrite = input("Do you want to overwrite this file? ")?;
+        let lower = overwrite.to_lowercase();
+        if lower != "y" && lower != "yes" {
+            std::process::exit(0x0100);
+        }
+    }
+
+    let mut file = File::create(&out_path)?;
+    println!("Writing merged wanted list to {}", out_path_str);
+    file.write_all(xml_string.as_bytes())?;
     Ok(())
 }
 
