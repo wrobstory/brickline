@@ -21,8 +21,9 @@ pub struct ItemColorHashKey<'a> {
 
 fn input(message: &str) -> Result<String, std::io::Error> {
     print!("{}", message);
+    std::io::stdout().flush()?;
     let mut buf = String::new();
-    std::io::stdin().read_to_string(&mut buf)?;
+    std::io::stdin().read_line(&mut buf)?;
     Ok(buf)
 }
 
@@ -204,9 +205,15 @@ pub fn merge(merge_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
         .ok_or(IOError::new(ErrorKind::InvalidInput, "Empty output path"))?;
     let out_path = PathBuf::from(out_path_str);
     if out_path.exists() {
-        let overwrite = input("Do you want to overwrite this file? ")?;
+        let msg = format!(
+            "The file {} already exists. Do you want to overwrite this file? ",
+            out_path_str
+        );
+        let overwrite = input(&msg)?;
         let lower = overwrite.to_lowercase();
-        if lower != "y" && lower != "yes" {
+        let trimmed = lower.trim();
+        if trimmed != "y" && trimmed != "yes" {
+            println!("Exited without writing merged wanted list");
             std::process::exit(0x0100);
         }
     }
