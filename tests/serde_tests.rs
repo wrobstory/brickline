@@ -74,7 +74,8 @@ mod tests {
         let items = vec![item_1];
         let inventory = Inventory { items: items };
         let stringified = String::try_from(inventory).unwrap();
-        let expected = "<INVENTORY>\
+        let expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+                <INVENTORY>\
                 <ITEM>\
                 <ITEMTYPE>P</ITEMTYPE>\
                 <ITEMID>3622</ITEMID>\
@@ -110,7 +111,8 @@ mod tests {
         let items = vec![item_1, item_2, item_3];
         let inventory = Inventory { items: items };
         let stringified = String::try_from(inventory).unwrap();
-        let expected = "<INVENTORY>\
+        let expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+                <INVENTORY>\
                 <ITEM>\
                 <ITEMTYPE>P</ITEMTYPE>\
                 <ITEMID>3622</ITEMID>\
@@ -141,6 +143,7 @@ mod tests {
             "bricklink_example.xml",
             "test_inventory_1.xml",
             "test_inventory_2.xml",
+            "test_inventory_3.xml",
         ]
         .iter() {
             let inventory = common::resource_name_to_inventory(resource_name);

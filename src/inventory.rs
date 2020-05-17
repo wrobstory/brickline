@@ -51,13 +51,14 @@ impl SerdeInventory {
     /// let inventory = Inventory { items: vec![test_item]};
     /// let serde_inventory = SerdeInventory::from(inventory);
     /// let stringified = to_string(&serde_inventory).unwrap();
-    /// let repaired = SerdeInventory::repair_serialized_string(stringified);
+    /// let repaired = SerdeInventory::amend_serialized_string(stringified);
     /// ```
-    pub fn repair_serialized_string(mut serde_string: String) -> String {
+    pub fn amend_serialized_string(mut serde_string: String) -> String {
         serde_string.replace_range(11..17, "");
         let end_bound_1 = serde_string.len() - 19;
         let end_bound_2 = serde_string.len() - 12;
         serde_string.replace_range(end_bound_1..end_bound_2, "");
+        serde_string.insert_str(0, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         serde_string
     }
 }
@@ -84,7 +85,7 @@ impl std::convert::TryFrom<Inventory> for String {
     fn try_from(inventory: Inventory) -> Result<Self, Self::Error> {
         let serde_inventory = SerdeInventory::from(inventory);
         let stringified = to_string(&serde_inventory)?;
-        Ok(SerdeInventory::repair_serialized_string(stringified))
+        Ok(SerdeInventory::amend_serialized_string(stringified))
     }
 }
 
@@ -384,6 +385,7 @@ pub enum Condition {
     Complete,
     Incomplete,
     Sealed,
+    NotProvided
 }
 
 impl std::convert::From<String> for Condition {
@@ -394,6 +396,7 @@ impl std::convert::From<String> for Condition {
             "C" => Self::Complete,
             "I" => Self::Incomplete,
             "S" => Self::Sealed,
+            "X" => Self::NotProvided,
             unsupported => panic!(format!("{} is not a supported Condition!", unsupported)),
         }
     }
@@ -407,6 +410,7 @@ impl std::convert::From<Condition> for String {
             Condition::Complete => "C".to_string(),
             Condition::Incomplete => "I".to_string(),
             Condition::Sealed => "S".to_string(),
+            Condition::NotProvided => "X".to_string()
         }
     }
 }
