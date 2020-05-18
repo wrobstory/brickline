@@ -1,5 +1,5 @@
 [package]
-name = "bricktools"
+name = "brickline"
 version = "0.1.0"
 authors = ["Rob Story <wrobstory@gmail.com>"]
 edition = "2018"

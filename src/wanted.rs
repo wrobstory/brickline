@@ -1,11 +1,11 @@
-//! A Bricklink Inventory
+//! A Bricklink Wanted List
 //!
 //! These types are all based on the Bricklink
 //! XML schema as described here: https://www.bricklink.com/help.asp?helpID=207
 //!
 //! So what's going on here? The quick_xml library has relatively limited support
 //! for complex types, and Rust doesn't have good support for a serializable decimel
-//! type. So between those two things we've ended up with SerdeInventory and SerdeItem,
+//! type. So between those two things we've ended up with SerdeIn and SerdeItem,
 //! top level structs that only use primitive types. We then iterate over the entire
 //! list of items and do a bunch of From/Into transformations to go from our primitive
 //! types to more complex ones. It's a bummer, but I don't expect to ever have Bricklink
@@ -15,15 +15,15 @@ use quick_xml::se::to_string;
 use quick_xml::DeError;
 use serde::{Deserialize, Serialize};
 
-/// The serde inventory of SerdeItems
+/// The serde wanted_list of SerdeItems
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename(serialize = "INVENTORY"))]
-pub struct SerdeInventory {
+pub struct SerdeWantedList {
     #[serde(rename = "ITEM")]
     pub items: Vec<SerdeItem>,
 }
 
-impl SerdeInventory {
+impl SerdeWantedList {
     /// Dirty fix for a serialization issue with the quick_xml library.
     /// When we try to serialize a Vec<SerdeItem>, we end up with
     /// <ITEM><ITEM>...</ITEM></ITEM> at the beginning and end of the
@@ -33,14 +33,14 @@ impl SerdeInventory {
     ///
     /// # Arguments
     ///
-    /// * `serde_string`: Serialized String of a SerdeInventory
+    /// * `serde_string`: Serialized String of a SerdeWantedList
     ///
     /// # Example
     ///
     /// ```
     /// use quick_xml::se::to_string;
-    /// use bricktools::inventory::{Inventory, SerdeInventory, Item, ItemType,
-    ///                             ItemID, Color};
+    /// use brickline::wanted::{WantedList, SerdeWantedList, Item, ItemType,
+    ///                         ItemID, Color};
     ///
     /// let test_item = Item::build_test_item(
     ///     ItemType::Part,
@@ -48,10 +48,10 @@ impl SerdeInventory {
     ///     Some(Color(11)),
     ///     None
     /// );
-    /// let inventory = Inventory { items: vec![test_item]};
-    /// let serde_inventory = SerdeInventory::from(inventory);
-    /// let stringified = to_string(&serde_inventory).unwrap();
-    /// let repaired = SerdeInventory::amend_serialized_string(stringified);
+    /// let wanted_list = WantedList { items: vec![test_item]};
+    /// let serde_wanted_list = SerdeWantedList::from(wanted_list);
+    /// let stringified = to_string(&serde_wanted_list).unwrap();
+    /// let repaired = SerdeWantedList::amend_serialized_string(stringified);
     /// ```
     pub fn amend_serialized_string(mut serde_string: String) -> String {
         serde_string.replace_range(11..17, "");
@@ -63,36 +63,36 @@ impl SerdeInventory {
     }
 }
 
-/// A Bricklink Inventory
+/// A Bricklink WantedList
 #[derive(Debug, PartialEq)]
-pub struct Inventory {
+pub struct WantedList {
     pub items: Vec<Item>,
 }
 
-/// Serialize an Inventory to an XML String
-impl std::convert::TryFrom<Inventory> for String {
+/// Serialize an WantedList to an XML String
+impl std::convert::TryFrom<WantedList> for String {
     type Error = DeError;
 
-    /// Given an Inventory, convert it to an XML string.
-    /// This will go through the SerdeInventory type as well as
+    /// Given an WantedList, convert it to an XML string.
+    /// This will go through the SerdeWantedList type as well as
     /// apply some of the ad-hoc fixes needed to make it a valid
     /// XML string.
     ///
     /// # Arguments
     ///
-    /// * `inventory`: Bricklink Inventory
+    /// * `wanted_list`: Bricklink WantedList
     /// ```
-    fn try_from(inventory: Inventory) -> Result<Self, Self::Error> {
-        let serde_inventory = SerdeInventory::from(inventory);
-        let stringified = to_string(&serde_inventory)?;
-        Ok(SerdeInventory::amend_serialized_string(stringified))
+    fn try_from(wanted_list: WantedList) -> Result<Self, Self::Error> {
+        let serde_wanted_list = SerdeWantedList::from(wanted_list);
+        let stringified = to_string(&serde_wanted_list)?;
+        Ok(SerdeWantedList::amend_serialized_string(stringified))
     }
 }
 
-impl std::convert::From<SerdeInventory> for Inventory {
-    fn from(serde_inventory: SerdeInventory) -> Inventory {
-        Inventory {
-            items: serde_inventory
+impl std::convert::From<SerdeWantedList> for WantedList {
+    fn from(serde_wanted_list: SerdeWantedList) -> WantedList {
+        WantedList {
+            items: serde_wanted_list
                 .items
                 .into_iter()
                 .map(|i| Item::from(i))
@@ -101,10 +101,10 @@ impl std::convert::From<SerdeInventory> for Inventory {
     }
 }
 
-impl std::convert::From<Inventory> for SerdeInventory {
-    fn from(inventory: Inventory) -> SerdeInventory {
-        SerdeInventory {
-            items: inventory
+impl std::convert::From<WantedList> for SerdeWantedList {
+    fn from(wanted_list: WantedList) -> SerdeWantedList {
+        SerdeWantedList {
+            items: wanted_list
                 .items
                 .into_iter()
                 .map(|i| SerdeItem::from(i))
@@ -215,7 +215,7 @@ impl Item {
     /// # Example
     ///
     /// ```
-    /// use bricktools::inventory::{Item, ItemType, ItemID, Color};
+    /// use brickline::wanted::{Item, ItemType, ItemID, Color};
     ///
     /// let test_item = Item::build_test_item(
     ///     ItemType::Part,
@@ -483,7 +483,7 @@ impl std::convert::From<WantedShow> for String {
     }
 }
 
-/// ID of wanted list
+/// ID of wanted_list
 #[derive(Clone, Debug, PartialEq)]
 pub struct WantedListID(String);
 

@@ -1,5 +1,5 @@
-use bricktools::inventory::{Inventory, SerdeInventory};
-use bricktools::xml_to_string;
+use brickline::wanted::{WantedList, SerdeWantedList};
+use brickline::xml_to_string;
 
 use quick_xml::de::from_str;
 
@@ -19,10 +19,10 @@ fn get_resource_path(resource_name: &str) -> PathBuf {
     resource_path
 }
 
-pub fn resource_name_to_inventory(resource_name: &str) -> Inventory {
+pub fn resource_name_to_wanted_list(resource_name: &str) -> WantedList {
     let resource_path = get_resource_path(resource_name);
     let resource_str = xml_to_string(&resource_path).unwrap();
-    Inventory::from(from_str::<SerdeInventory>(&resource_str).unwrap())
+    WantedList::from(from_str::<SerdeWantedList>(&resource_str).unwrap())
 }
 
 pub fn resource_name_to_string(resource_name: &str) -> String {

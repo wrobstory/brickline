@@ -1,6 +1,6 @@
-pub mod inventory;
+pub mod wanted;
 
-use crate::inventory::{Color, Inventory, Item, ItemID, MinQty, SerdeInventory};
+use crate::wanted::{Color, WantedList, Item, ItemID, MinQty, SerdeWantedList};
 
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use clap::ArgMatches;
 use quick_xml::de::from_str;
 
-/// The primary key of an Inventory Item
+/// The primary key of an WantedList Item
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ItemColorHashKey<'a> {
     item_id: &'a ItemID,
@@ -61,7 +61,7 @@ fn write_file_with_overwrite_prompt(
 
     let mut file = File::create(file_path)?;
     println!(
-        "Writing merged wanted list to {}",
+        "Writing joined wanted list to {}",
         file_path.to_str().unwrap()
     );
     file.write_all(content.as_bytes())?;
@@ -78,7 +78,7 @@ fn write_file_with_overwrite_prompt(
 ///
 /// ```
 /// use std::path::PathBuf;
-/// use bricktools::xml_to_string;
+/// use brickline::xml_to_string;
 ///
 /// let path = PathBuf::from("/home/user/path/to/file.xml");
 /// let xml_string = xml_to_string(&path);
@@ -90,7 +90,7 @@ pub fn xml_to_string(file_path: &PathBuf) -> Result<String, IOError> {
     Ok(xml_string)
 }
 
-/// Given a path to a file, read the file and deserialize it to an Inventory
+/// Given a path to a file, read the file and deserialize it to an WantedList
 ///
 /// # Arguments
 ///
@@ -99,22 +99,22 @@ pub fn xml_to_string(file_path: &PathBuf) -> Result<String, IOError> {
 /// Example
 ///
 /// ```no_run
-/// use bricktools::file_to_inventory;
+/// use brickline::file_to_inventory;
 ///
 /// let inventory = file_to_inventory("/path/to/wanted_list.xml");
-pub fn file_to_inventory(file_path: &str) -> Result<Inventory, IOError> {
+pub fn file_to_inventory(file_path: &str) -> Result<WantedList, IOError> {
     let resource_path = PathBuf::from(file_path);
     let resource_str = xml_to_string(&resource_path)?;
-    match from_str::<SerdeInventory>(&resource_str) {
-        Ok(serde_inventory) => Ok(Inventory::from(serde_inventory)),
+    match from_str::<SerdeWantedList>(&resource_str) {
+        Ok(serde_inventory) => Ok(WantedList::from(serde_inventory)),
         Err(e) => Err(IOError::new(ErrorKind::InvalidInput, e)),
     }
 }
 
-/// Given an Inventory, build a HashMap of each Inventory Item where
+/// Given an WantedList, build a HashMap of each WantedList Item where
 /// the hash key is the ItemID and Color combination for the Item.
 /// Note: we explicitly .clone the Item for this map, as we're going to
-/// use it as the base case for our merged list.
+/// use it as the base case for our joined list.
 ///
 /// # Arguments
 ///
@@ -123,17 +123,17 @@ pub fn file_to_inventory(file_path: &str) -> Result<Inventory, IOError> {
 /// Example
 ///
 /// ```no_run
-/// use bricktools::{xml_to_string, build_item_color_hashmap};
-/// use bricktools::inventory::{Inventory, SerdeInventory};
+/// use brickline::{xml_to_string, build_item_color_hashmap};
+/// use brickline::wanted::{WantedList, SerdeWantedList};
 /// use quick_xml::de::from_str;
 /// use std::path::PathBuf;
 ///
 /// let path = PathBuf::from("/home/user/path/to/file.xml");
 /// let xml_string = xml_to_string(&path).unwrap();
-/// let inventory = Inventory::from(from_str::<SerdeInventory>(&xml_string).unwrap());
+/// let inventory = WantedList::from(from_str::<SerdeWantedList>(&xml_string).unwrap());
 /// let hm = build_item_color_hashmap(&inventory);
 /// ```
-pub fn build_item_color_hashmap(inventory: &Inventory) -> BTreeMap<ItemColorHashKey, Item> {
+pub fn build_item_color_hashmap(inventory: &WantedList) -> BTreeMap<ItemColorHashKey, Item> {
     inventory
         .items
         .iter()
@@ -160,8 +160,8 @@ pub fn build_item_color_hashmap(inventory: &Inventory) -> BTreeMap<ItemColorHash
 ///
 /// Example
 ///
-/// use bricktools::increment_item;
-/// use bricktools::inventory::Item;
+/// use brickline::increment_item;
+/// use brickline::wanted::Item;
 ///
 /// let mut left_item = Item::build_test_item(ItemType::Part, ItemID(String::from("3039")), Some(Color(5)), Some(MinQty(20)));
 /// let right_item = Item::build_test_item(ItemType::Part, ItemID(String::from("3039")), Some(Color(5)), Some(MinQty(10)));
@@ -180,26 +180,26 @@ fn increment_item(item_to_increment: &mut Item, incrementing_item: &Item) -> () 
     }
 }
 
-/// Given two Inventories, merge the right inventory into the left one.
-/// Here's how the merge happens:
+/// Given two Inventories, join the right inventory into the left one.
+/// Here's how the join happens:
 /// 1. Build hash table from left inventory
 /// 2. Iterate through right inventory and probe table for ItemId/Color keys
 /// 3. If a key is found, add the MinQty of the right inventory to the left.
 ///    NOTE: The metadata from the *left* inventory is retained. There is no
-///    other metadata merging other than MinQty.
+///    other metadata joining other than MinQty.
 /// 4. If no key is found, add the Item from the right inventory to the hash table
-/// 5. Convert the .values() of the hash table into .items of a new Inventory
+/// 5. Convert the .values() of the hash table into .items of a new WantedList
 ///
 /// # Arguments
 ///
-/// * `left_inventory`: Inventory to be merged into
-/// * `right_inventory`: Inventory to merge into left inventory
+/// * `left_inventory`: WantedList to be joined into
+/// * `right_inventory`: WantedList to join into left inventory
 ///
 /// Example
 ///
 /// ```
-/// use bricktools::merge_inventories;
-/// use bricktools::inventory::{Inventory, Item, ItemID, ItemType, Color, MinQty};
+/// use brickline::join_inventories;
+/// use brickline::wanted::{WantedList, Item, ItemID, ItemType, Color, MinQty};
 ///
 /// let item = Item::build_test_item(
 ///       ItemType::Part,
@@ -209,12 +209,12 @@ fn increment_item(item_to_increment: &mut Item, incrementing_item: &Item) -> () 
 /// );
 /// let item_1 = item.clone();
 ///
-/// let left_inventory = Inventory { items: vec![item] };
-/// let right_inventory = Inventory { items: vec![item_1] };
+/// let left_inventory = WantedList { items: vec![item] };
+/// let right_inventory = WantedList { items: vec![item_1] };
 ///
-/// let merged_inventory = merge_inventories(&left_inventory, &right_inventory);
+/// let joined_inventory = join_inventories(&left_inventory, &right_inventory);
 /// ```
-pub fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory) -> Inventory {
+pub fn join_inventories(left_inventory: &WantedList, right_inventory: &WantedList) -> WantedList {
     let mut left_inv_map = build_item_color_hashmap(left_inventory);
     right_inventory
         .items
@@ -231,24 +231,24 @@ pub fn merge_inventories(left_inventory: &Inventory, right_inventory: &Inventory
             }
             acc
         });
-    Inventory {
+    WantedList {
         items: left_inv_map.values().cloned().collect(),
     }
 }
 
-/// Given the arguments for the `merge` command, merge the two wanted lists,
+/// Given the arguments for the `join` command, join the two wanted lists,
 /// then write the result to the provided output path.
 ///
 /// # Arguments
 ///
-/// * `merge_args`: Arguments to the merge command
+/// * `join_args`: Arguments to the join command
 ///
-pub fn merge(merge_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    let left_path = merge_args.value_of("left").ok_or(IOError::new(
+pub fn join(join_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+    let left_path = join_args.value_of("left").ok_or(IOError::new(
         ErrorKind::InvalidInput,
         "Empty left inventory path",
     ))?;
-    let right_path = merge_args.value_of("right").ok_or(IOError::new(
+    let right_path = join_args.value_of("right").ok_or(IOError::new(
         ErrorKind::InvalidInput,
         "Empty right inventory path",
     ))?;
@@ -257,10 +257,10 @@ pub fn merge(merge_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     println!("Left Bricklink Wanted List: {}", left_path);
     println!("Right Bricklink Wanted List: {}", right_path);
     println!("Merging wanted lists...");
-    let merged_inventory = merge_inventories(&left_inventory, &right_inventory);
-    let xml_string = String::try_from(merged_inventory)?;
+    let joined_inventory = join_inventories(&left_inventory, &right_inventory);
+    let xml_string = String::try_from(joined_inventory)?;
 
-    let out_path_str = merge_args
+    let out_path_str = join_args
         .value_of("output")
         .ok_or(IOError::new(ErrorKind::InvalidInput, "Empty output path"))?;
     let out_path = PathBuf::from(out_path_str);
@@ -272,7 +272,7 @@ pub fn merge(merge_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
 mod tests {
 
     use super::*;
-    use crate::inventory::ItemType;
+    use crate::wanted::ItemType;
 
     #[test]
     fn test_build_item_color_hashmap() {
@@ -292,7 +292,7 @@ mod tests {
             Some(Color(5)),
             None,
         );
-        let inventory = Inventory {
+        let inventory = WantedList {
             items: vec![item_1, item_2, item_3],
         };
         let hm = build_item_color_hashmap(&inventory);

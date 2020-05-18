@@ -1,9 +1,9 @@
-extern crate bricktools;
+extern crate brickline;
 
 use std::convert::TryFrom;
 
-use bricktools::inventory::{
-    Color, Condition, Inventory, Item, ItemID, ItemType, MaxPrice, MinQty, Notify, QtyFilled,
+use brickline::wanted::{
+    Color, Condition, WantedList, Item, ItemID, ItemType, MaxPrice, MinQty, Notify, QtyFilled,
     Remarks,
 };
 
@@ -15,9 +15,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_xml_to_inventory() {
-        let bricklink_inventory: Inventory =
-            common::resource_name_to_inventory("bricklink_example.xml");
+    fn test_xml_to_wanted_list() {
+        let bricklink_wanted_list: WantedList =
+            common::resource_name_to_wanted_list("bricklink_example.xml");
 
         let item_1 = Item {
             item_type: ItemType::Part,
@@ -59,12 +59,12 @@ mod tests {
             wanted_list_id: None,
         };
         let items = vec![item_1, item_2, item_3];
-        let expected_inventory = Inventory { items: items };
-        assert_eq!(bricklink_inventory, expected_inventory);
+        let expected_wanted_list = WantedList { items: items };
+        assert_eq!(bricklink_wanted_list, expected_wanted_list);
     }
 
     #[test]
-    fn test_inventory_to_string_1() {
+    fn test_wanted_list_to_string_1() {
         let item_1 = Item::build_test_item(
             ItemType::Part,
             ItemID(String::from("3622")),
@@ -72,8 +72,8 @@ mod tests {
             Some(MinQty(4)),
         );
         let items = vec![item_1];
-        let inventory = Inventory { items: items };
-        let stringified = String::try_from(inventory).unwrap();
+        let wanted_list = WantedList { items: items };
+        let stringified = String::try_from(wanted_list).unwrap();
         let expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
                 <INVENTORY>\
                 <ITEM>\
@@ -89,7 +89,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inventory_to_string_2() {
+    fn test_wanted_list_to_string_2() {
         let item_1 = Item::build_test_item(
             ItemType::Part,
             ItemID(String::from("3622")),
@@ -109,8 +109,8 @@ mod tests {
             Some(MinQty(4)),
         );
         let items = vec![item_1, item_2, item_3];
-        let inventory = Inventory { items: items };
-        let stringified = String::try_from(inventory).unwrap();
+        let wanted_list = WantedList { items: items };
+        let stringified = String::try_from(wanted_list).unwrap();
         let expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
                 <INVENTORY>\
                 <ITEM>\
@@ -141,14 +141,14 @@ mod tests {
     fn test_roundtrips() {
         for resource_name in vec![
             "bricklink_example.xml",
-            "test_inventory_1.xml",
-            "test_inventory_2.xml",
-            "test_inventory_3.xml",
+            "test_wanted_list_1.xml",
+            "test_wanted_list_2.xml",
+            "test_wanted_list_3.xml",
         ]
         .iter()
         {
-            let inventory = common::resource_name_to_inventory(resource_name);
-            let stringified = String::try_from(inventory).unwrap();
+            let wanted_list = common::resource_name_to_wanted_list(resource_name);
+            let stringified = String::try_from(wanted_list).unwrap();
             let expected_string = common::resource_name_to_string(resource_name);
             assert_eq!(expected_string, stringified);
         }

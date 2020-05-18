@@ -1,6 +1,6 @@
-extern crate bricktools;
+extern crate brickline;
 
-use bricktools::inventory::{ItemID, MinQty, Remarks};
+use brickline::wanted::{ItemID, MinQty, Remarks};
 
 mod common;
 
@@ -10,12 +10,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_merge_inventories_1() {
-        let inventory_1 = common::resource_name_to_inventory("test_inventory_1.xml");
-        let inventory_2 = common::resource_name_to_inventory("test_inventory_2.xml");
+    fn test_join_inventories_1() {
+        let wanted_list_1 = common::resource_name_to_wanted_list("test_wanted_list_1.xml");
+        let wanted_list_2 = common::resource_name_to_wanted_list("test_wanted_list_2.xml");
 
-        let merged_inventory_1 = bricktools::merge_inventories(&inventory_1, &inventory_2);
-        let merged_inventory_2 = bricktools::merge_inventories(&inventory_2, &inventory_1);
+        let joined_wanted_list_1 = brickline::join_inventories(&wanted_list_1, &wanted_list_2);
+        let joined_wanted_list_2 = brickline::join_inventories(&wanted_list_2, &wanted_list_1);
 
         // These end up being ordered by ItemID
         let expected_qty = vec![
@@ -25,27 +25,27 @@ mod tests {
             (ItemID(String::from("3623")), None),
         ];
         for (i, expected) in expected_qty.iter().enumerate() {
-            let item = &merged_inventory_1.items[i];
+            let item = &joined_wanted_list_1.items[i];
             assert_eq!(expected.0, item.item_id);
             assert_eq!(expected.1, item.min_qty)
         }
 
-        // The first merge should retain the remarks of inventory_1
+        // The first join should retain the remarks of wanted_list_1
         assert_eq!(
-            merged_inventory_1.items[1].remarks,
+            joined_wanted_list_1.items[1].remarks,
             Some(Remarks("Testing".to_string()))
         );
-        // The second merge should use inventory_2, so no remarks
-        assert_eq!(merged_inventory_2.items[1].remarks, None);
+        // The second join should use wanted_list_2, so no remarks
+        assert_eq!(joined_wanted_list_2.items[1].remarks, None);
     }
 
     #[test]
-    fn test_merge_inventories_2() {
-        let inventory_1 = common::resource_name_to_inventory("test_inventory_1.xml");
-        let inventory_2 = common::resource_name_to_inventory("bricklink_example.xml");
+    fn test_join_inventories_2() {
+        let wanted_list_1 = common::resource_name_to_wanted_list("test_wanted_list_1.xml");
+        let wanted_list_2 = common::resource_name_to_wanted_list("bricklink_example.xml");
 
-        let merged_inventory_1 = bricktools::merge_inventories(&inventory_1, &inventory_2);
-        let merged_inventory_2 = bricktools::merge_inventories(&inventory_2, &inventory_1);
+        let joined_wanted_list_1 = brickline::join_inventories(&wanted_list_1, &wanted_list_2);
+        let joined_wanted_list_2 = brickline::join_inventories(&wanted_list_2, &wanted_list_1);
 
         // These end up being ordered by ItemID
         let expected_qty = vec![
@@ -55,19 +55,19 @@ mod tests {
             (ItemID(String::from("3623")), None),
         ];
         for (i, expected) in expected_qty.iter().enumerate() {
-            let item = &merged_inventory_1.items[i];
+            let item = &joined_wanted_list_1.items[i];
             assert_eq!(expected.0, item.item_id);
             assert_eq!(expected.1, item.min_qty)
         }
 
-        // The first merge should retain the remarks of inventory_1
+        // The first join should retain the remarks of wanted_list_1
         assert_eq!(
-            merged_inventory_1.items[0].remarks,
+            joined_wanted_list_1.items[0].remarks,
             Some(Remarks("Testing".to_string()))
         );
-        // The second merge should retain the remarks of bricklink_example
+        // The second join should retain the remarks of bricklink_example
         assert_eq!(
-            merged_inventory_2.items[0].remarks,
+            joined_wanted_list_2.items[0].remarks,
             Some(Remarks("for MOC AB154A".to_string()))
         );
     }
