@@ -1,8 +1,10 @@
 ```
-| ◯ ◯ ◯ |
-| ◯ ◯ ◯ |
-  | ◯ ◯ ◯ |
-  | ◯ ◯ ◯ | 
+| ◯ ◯ ⏺ |
+| ◯ ◯ ⏺ |
+  | ◯ ⏺ ◯ |
+  | ◯ ⏺ ◯ | 
+    | ⏺ ◯ ◯ |
+    | ⏺ ◯ ◯ |
 ```
 
 # brickline
@@ -41,4 +43,6 @@ cd brickline
 cargo build --release
 ```
 
-The resulting binary will be at `target/release/brickline`
+The resulting binary will be at `target/release/brickline`. 
+
+I'm hoping to have Github binaries and a homebrew package available soon.
