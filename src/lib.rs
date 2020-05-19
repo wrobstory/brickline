@@ -1,6 +1,6 @@
 pub mod wanted;
 
-use crate::wanted::{Color, WantedList, Item, ItemID, MinQty, SerdeWantedList};
+use crate::wanted::{Color, WantedList, Item, ItemID, MinQty, SerdeWantedList, ItemColorHashKey};
 
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
@@ -12,12 +12,6 @@ use std::path::PathBuf;
 use clap::ArgMatches;
 use quick_xml::de::from_str;
 
-/// The primary key of an WantedList Item
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct ItemColorHashKey<'a> {
-    item_id: &'a ItemID,
-    color: &'a Option<Color>,
-}
 
 /// Get user input from stdout
 ///

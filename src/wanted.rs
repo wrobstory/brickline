@@ -14,6 +14,7 @@
 use quick_xml::se::to_string;
 use quick_xml::DeError;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// The serde wanted_list of SerdeItems
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -87,6 +88,66 @@ impl std::convert::TryFrom<WantedList> for String {
         let stringified = to_string(&serde_wanted_list)?;
         Ok(SerdeWantedList::amend_serialized_string(stringified))
     }
+}
+
+struct WantedListAggregate<'a> {
+    pub total_items: i32,
+    pub total_parts: i32,
+    pub unique_item_color_count: i32,
+    pub unique_color_count: i32,
+
+    item_color_set: HashSet<ItemColorHashKey<'a>>,
+    color_set: HashSet<&'a Color>,
+}
+
+fn update_wanted_list_aggregate<'a>(serde_item: SerdeItem, aggregate: &mut WantedListAggregate<'a>) -> Item {
+    let item = Item::from(serde_item);
+
+    aggregate.total_items += 1;
+
+    match &item.min_qty {
+        Some(min_qty) => aggregate.total_items += min_qty.0,
+        None => aggregate.total_items += 1
+    };
+
+    let ic_hk = ItemColorHashKey { item_id: &item.item_id, color: &item.color};
+
+    if !aggregate.item_color_set.contains(&ic_hk) {
+        aggregate.unique_item_color_count += 1;
+        aggregate.item_color_set.insert(ic_hk);
+    }
+
+    item.color.as_ref().map(|color|
+    if !aggregate.color_set.contains(color) {
+        aggregate.unique_item_color_count += 1;
+        aggregate.color_set.insert(&color);
+    }
+        );
+
+
+    item
+}
+
+fn type_and_aggregate<'a>(
+    serde_wanted_list: SerdeWantedList,
+) -> (WantedList, WantedListAggregate<'a>) {
+    let mut agg = WantedListAggregate {
+        total_items: 0,
+        total_parts: 0,
+        unique_item_color_count: 0,
+        unique_color_count: 0,
+        item_color_set: HashSet::new(),
+        color_set: HashSet::new()
+    };
+
+    let wanted_list = WantedList {
+        items: serde_wanted_list
+            .items
+            .into_iter()
+            .map(|i| update_wanted_list_aggregate(i, &mut agg))
+            .collect(),
+    };
+    (wanted_list, agg)
 }
 
 impl std::convert::From<SerdeWantedList> for WantedList {
@@ -324,6 +385,13 @@ impl std::convert::From<Color> for i8 {
     fn from(color: Color) -> i8 {
         color.0
     }
+}
+
+/// The primary key of an WantedList Item
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ItemColorHashKey<'a> {
+    item_id: &'a ItemID,
+    color: &'a Option<Color>,
 }
 
 /// Maximum Desired Price

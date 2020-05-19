@@ -3,8 +3,8 @@ extern crate brickline;
 use std::convert::TryFrom;
 
 use brickline::wanted::{
-    Color, Condition, WantedList, Item, ItemID, ItemType, MaxPrice, MinQty, Notify, QtyFilled,
-    Remarks,
+    Color, Condition, Item, ItemID, ItemType, MaxPrice, MinQty, Notify, QtyFilled, Remarks,
+    WantedList,
 };
 
 mod common;
