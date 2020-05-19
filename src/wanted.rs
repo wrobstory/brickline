@@ -70,6 +70,7 @@ pub struct WantedList {
     pub items: Vec<Item>,
 }
 
+
 /// Serialize an WantedList to an XML String
 impl std::convert::TryFrom<WantedList> for String {
     type Error = DeError;
@@ -90,27 +91,47 @@ impl std::convert::TryFrom<WantedList> for String {
     }
 }
 
-struct WantedListAggregate<'a> {
+#[derive(Debug, PartialEq)]
+pub struct WantedListStatistics {
     pub total_items: i32,
     pub total_parts: i32,
     pub unique_item_color_count: i32,
     pub unique_color_count: i32,
 
-    item_color_set: HashSet<ItemColorHashKey<'a>>,
-    color_set: HashSet<&'a Color>,
+    pub item_color_set: HashSet<OwnedItemColorHashKey>,
+    pub color_set: HashSet<Color>,
 }
 
-fn update_wanted_list_aggregate<'a>(serde_item: SerdeItem, aggregate: &mut WantedListAggregate<'a>) -> Item {
-    let item = Item::from(serde_item);
+impl std::fmt::Display for WantedListStatistics {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "
+            Total Items: {}, 
+            Total Parts: {}, 
+            Unique Item/Color Count: {}, 
+            Unique Color Count: {}", 
+            self.total_items, self.total_parts, self.unique_item_color_count, self.unique_color_count)
+    }
+}
+
+/// The primary key of an WantedList Item
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct OwnedItemColorHashKey {
+    item_id: ItemID,
+    color: Option<Color>,
+}
+
+pub fn update_wanted_list_statistic(item: &Item, aggregate: &mut WantedListStatistics) -> () {
 
     aggregate.total_items += 1;
 
     match &item.min_qty {
-        Some(min_qty) => aggregate.total_items += min_qty.0,
-        None => aggregate.total_items += 1
+        Some(min_qty) => aggregate.total_parts += min_qty.0,
+        None => aggregate.total_parts += 1
     };
 
-    let ic_hk = ItemColorHashKey { item_id: &item.item_id, color: &item.color};
+    let ic_hk = OwnedItemColorHashKey { item_id: item.item_id.clone(), 
+                                        color: item.color.clone()};
 
     if !aggregate.item_color_set.contains(&ic_hk) {
         aggregate.unique_item_color_count += 1;
@@ -118,20 +139,15 @@ fn update_wanted_list_aggregate<'a>(serde_item: SerdeItem, aggregate: &mut Wante
     }
 
     item.color.as_ref().map(|color|
-    if !aggregate.color_set.contains(color) {
-        aggregate.unique_item_color_count += 1;
-        aggregate.color_set.insert(&color);
-    }
-        );
-
-
-    item
+        if !aggregate.color_set.contains(color) {
+            aggregate.unique_color_count += 1;
+            aggregate.color_set.insert(color.clone());
+        }
+    );
 }
 
-fn type_and_aggregate<'a>(
-    serde_wanted_list: SerdeWantedList,
-) -> (WantedList, WantedListAggregate<'a>) {
-    let mut agg = WantedListAggregate {
+pub fn type_and_gen_statistics(serde_wanted_list: SerdeWantedList) -> (WantedList, WantedListStatistics) {
+    let mut statistics = WantedListStatistics {
         total_items: 0,
         total_parts: 0,
         unique_item_color_count: 0,
@@ -140,26 +156,18 @@ fn type_and_aggregate<'a>(
         color_set: HashSet::new()
     };
 
-    let wanted_list = WantedList {
-        items: serde_wanted_list
+    let items = serde_wanted_list
             .items
             .into_iter()
-            .map(|i| update_wanted_list_aggregate(i, &mut agg))
-            .collect(),
-    };
-    (wanted_list, agg)
-}
+            .map(|i| {
+                let item = Item::from(i);
+                update_wanted_list_statistic(&item, &mut statistics);
+                item
+            }
+            )
+            .collect();
 
-impl std::convert::From<SerdeWantedList> for WantedList {
-    fn from(serde_wanted_list: SerdeWantedList) -> WantedList {
-        WantedList {
-            items: serde_wanted_list
-                .items
-                .into_iter()
-                .map(|i| Item::from(i))
-                .collect(),
-        }
-    }
+    (WantedList { items: items }, statistics)
 }
 
 impl std::convert::From<WantedList> for SerdeWantedList {
@@ -169,6 +177,18 @@ impl std::convert::From<WantedList> for SerdeWantedList {
                 .items
                 .into_iter()
                 .map(|i| SerdeItem::from(i))
+                .collect(),
+        }
+    }
+}
+
+impl std::convert::From<SerdeWantedList> for WantedList {
+    fn from(serde_wanted_list: SerdeWantedList) -> WantedList {
+        WantedList {
+            items: serde_wanted_list
+                .items
+                .into_iter()
+                .map(|i| Item::from(i))
                 .collect(),
         }
     }
@@ -385,13 +405,6 @@ impl std::convert::From<Color> for i8 {
     fn from(color: Color) -> i8 {
         color.0
     }
-}
-
-/// The primary key of an WantedList Item
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct ItemColorHashKey<'a> {
-    item_id: &'a ItemID,
-    color: &'a Option<Color>,
 }
 
 /// Maximum Desired Price
