@@ -25,9 +25,28 @@ Example:
 $ ./target/release/brickline join -l ./resources/test/test_wanted_list_3.xml \
                                   -r ./resources/test/test_wanted_list_4.xml \
                                   -o /tmp/joined_wanted_list.xml
-Left Bricklink Wanted List: ./resources/test/test_wanted_list_3.xml
-Right Bricklink Wanted List: ./resources/test/test_wanted_list_4.xml
+Left Wanted list Statistics for ./resources/test/test_wanted_list_3.xml
+
+Total Items: 45, 
+Total Parts: 196, 
+Unique Item/Color Count: 45, 
+Unique Color Count: 4
+
+Right Wanted List Statistics for ./resources/test/test_wanted_list_4.xml
+
+Total Items: 151, 
+Total Parts: 848, 
+Unique Item/Color Count: 151, 
+Unique Color Count: 14
+
 Merging wanted lists...
+
+Merged Wanted List Statistics 
+Total Items: 195, 
+Total Parts: 1044, 
+Unique Item/Color Count: 195, 
+Unique Color Count: 15
+
 Writing joined wanted list to /tmp/joined_wanted_list.xml
 ```
 
