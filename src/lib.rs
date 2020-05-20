@@ -1,6 +1,9 @@
 pub mod wanted;
 
-use crate::wanted::{Color, WantedList, Item, ItemID, MinQty, SerdeWantedList};
+use crate::wanted::{
+    gen_statistics, type_and_gen_statistics, Color, Item, ItemID, MinQty, SerdeWantedList,
+    WantedList, WantedListStatistics,
+};
 
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
@@ -99,14 +102,14 @@ pub fn xml_to_string(file_path: &PathBuf) -> Result<String, IOError> {
 /// Example
 ///
 /// ```no_run
-/// use brickline::file_to_inventory;
+/// use brickline::file_to_wanted_list;
 ///
-/// let inventory = file_to_inventory("/path/to/wanted_list.xml");
-pub fn file_to_inventory(file_path: &str) -> Result<WantedList, IOError> {
+/// let inventory = file_to_wanted_list("/path/to/wanted_list.xml");
+pub fn file_to_wanted_list(file_path: &str) -> Result<(WantedList, WantedListStatistics), IOError> {
     let resource_path = PathBuf::from(file_path);
     let resource_str = xml_to_string(&resource_path)?;
     match from_str::<SerdeWantedList>(&resource_str) {
-        Ok(serde_inventory) => Ok(WantedList::from(serde_inventory)),
+        Ok(serde_inventory) => Ok(type_and_gen_statistics(serde_inventory)),
         Err(e) => Err(IOError::new(ErrorKind::InvalidInput, e)),
     }
 }
@@ -130,8 +133,8 @@ pub fn file_to_inventory(file_path: &str) -> Result<WantedList, IOError> {
 ///
 /// let path = PathBuf::from("/home/user/path/to/file.xml");
 /// let xml_string = xml_to_string(&path).unwrap();
-/// let inventory = WantedList::from(from_str::<SerdeWantedList>(&xml_string).unwrap());
-/// let hm = build_item_color_hashmap(&inventory);
+/// let wanted_list = WantedList::from(from_str::<SerdeWantedList>(&xml_string).unwrap());
+/// let hm = build_item_color_hashmap(&wanted_list);
 /// ```
 pub fn build_item_color_hashmap(inventory: &WantedList) -> BTreeMap<ItemColorHashKey, Item> {
     inventory
@@ -252,12 +255,20 @@ pub fn join(join_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
         ErrorKind::InvalidInput,
         "Empty right inventory path",
     ))?;
-    let left_inventory = file_to_inventory(left_path)?;
-    let right_inventory = file_to_inventory(right_path)?;
-    println!("Left Bricklink Wanted List: {}", left_path);
-    println!("Right Bricklink Wanted List: {}", right_path);
-    println!("Merging wanted lists...");
-    let joined_inventory = join_inventories(&left_inventory, &right_inventory);
+    let (left_wanted_list, left_statistics) = file_to_wanted_list(left_path)?;
+    let (right_wanted_list, right_statistics) = file_to_wanted_list(right_path)?;
+    println!(
+        "Left Wanted list Statistics for {}\n{}\n",
+        left_path, left_statistics
+    );
+    println!(
+        "Right Wanted List Statistics for {}\n{}\n",
+        right_path, right_statistics
+    );
+    println!("Merging wanted lists...\n");
+    let joined_inventory = join_inventories(&left_wanted_list, &right_wanted_list);
+    let joined_statistics = gen_statistics(&joined_inventory);
+    println!("Merged Wanted List Statistics {}\n", joined_statistics);
     let xml_string = String::try_from(joined_inventory)?;
 
     let out_path_str = join_args

@@ -1,4 +1,4 @@
-use brickline::wanted::{WantedList, SerdeWantedList};
+use brickline::wanted::{SerdeWantedList, WantedList};
 use brickline::xml_to_string;
 
 use quick_xml::de::from_str;
