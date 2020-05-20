@@ -1,6 +1,9 @@
 pub mod wanted;
 
-use crate::wanted::{Color, WantedList, Item, ItemID, MinQty, SerdeWantedList, WantedListStatistics, type_and_gen_statistics};
+use crate::wanted::{
+    gen_statistics, type_and_gen_statistics, Color, Item, ItemID, MinQty, SerdeWantedList,
+    WantedList, WantedListStatistics,
+};
 
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
@@ -254,12 +257,18 @@ pub fn join(join_args: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     ))?;
     let (left_wanted_list, left_statistics) = file_to_wanted_list(left_path)?;
     let (right_wanted_list, right_statistics) = file_to_wanted_list(right_path)?;
-    println!("Left Bricklink Wanted List: {}", left_path);
-    println!("Left Bricklink List Statistics {}", left_statistics);
-    println!("Right Bricklink Wanted List: {}", right_path);
-    println!("Right Bricklink List Statistics {}", right_statistics);
-    println!("Merging wanted lists...");
+    println!(
+        "Left Wanted list Statistics for {}\n{}\n",
+        left_path, left_statistics
+    );
+    println!(
+        "Right Wanted List Statistics for {}\n{}\n",
+        right_path, right_statistics
+    );
+    println!("Merging wanted lists...\n");
     let joined_inventory = join_inventories(&left_wanted_list, &right_wanted_list);
+    let joined_statistics = gen_statistics(&joined_inventory);
+    println!("Merged Wanted List Statistics {}\n", joined_statistics);
     let xml_string = String::try_from(joined_inventory)?;
 
     let out_path_str = join_args

@@ -70,7 +70,6 @@ pub struct WantedList {
     pub items: Vec<Item>,
 }
 
-
 /// Serialize an WantedList to an XML String
 impl std::convert::TryFrom<WantedList> for String {
     type Error = DeError;
@@ -102,15 +101,34 @@ pub struct WantedListStatistics {
     pub color_set: HashSet<Color>,
 }
 
+impl WantedListStatistics {
+    pub fn init() -> WantedListStatistics {
+        WantedListStatistics {
+            total_items: 0,
+            total_parts: 0,
+            unique_item_color_count: 0,
+            unique_color_count: 0,
+            item_color_set: HashSet::new(),
+            color_set: HashSet::new(),
+        }
+    }
+}
+
 impl std::fmt::Display for WantedListStatistics {
     // This trait requires `fmt` with this exact signature.
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "
-            Total Items: {}, 
-            Total Parts: {}, 
-            Unique Item/Color Count: {}, 
-            Unique Color Count: {}", 
-            self.total_items, self.total_parts, self.unique_item_color_count, self.unique_color_count)
+        write!(
+            f,
+            "
+Total Items: {}, 
+Total Parts: {}, 
+Unique Item/Color Count: {}, 
+Unique Color Count: {}",
+            self.total_items,
+            self.total_parts,
+            self.unique_item_color_count,
+            self.unique_color_count
+        )
     }
 }
 
@@ -122,52 +140,64 @@ pub struct OwnedItemColorHashKey {
 }
 
 pub fn update_wanted_list_statistic(item: &Item, aggregate: &mut WantedListStatistics) -> () {
-
     aggregate.total_items += 1;
 
     match &item.min_qty {
         Some(min_qty) => aggregate.total_parts += min_qty.0,
-        None => aggregate.total_parts += 1
+        None => aggregate.total_parts += 1,
     };
 
-    let ic_hk = OwnedItemColorHashKey { item_id: item.item_id.clone(), 
-                                        color: item.color.clone()};
+    let ic_hk = OwnedItemColorHashKey {
+        item_id: item.item_id.clone(),
+        color: item.color.clone(),
+    };
 
     if !aggregate.item_color_set.contains(&ic_hk) {
         aggregate.unique_item_color_count += 1;
         aggregate.item_color_set.insert(ic_hk);
     }
 
-    item.color.as_ref().map(|color|
+    item.color.as_ref().map(|color| {
         if !aggregate.color_set.contains(color) {
             aggregate.unique_color_count += 1;
             aggregate.color_set.insert(color.clone());
         }
-    );
+    });
 }
 
-pub fn type_and_gen_statistics(serde_wanted_list: SerdeWantedList) -> (WantedList, WantedListStatistics) {
+pub fn type_and_gen_statistics(
+    serde_wanted_list: SerdeWantedList,
+) -> (WantedList, WantedListStatistics) {
     let mut statistics = WantedListStatistics {
         total_items: 0,
         total_parts: 0,
         unique_item_color_count: 0,
         unique_color_count: 0,
         item_color_set: HashSet::new(),
-        color_set: HashSet::new()
+        color_set: HashSet::new(),
     };
 
     let items = serde_wanted_list
-            .items
-            .into_iter()
-            .map(|i| {
-                let item = Item::from(i);
-                update_wanted_list_statistic(&item, &mut statistics);
-                item
-            }
-            )
-            .collect();
+        .items
+        .into_iter()
+        .map(|i| {
+            let item = Item::from(i);
+            update_wanted_list_statistic(&item, &mut statistics);
+            item
+        })
+        .collect();
 
     (WantedList { items: items }, statistics)
+}
+
+// TODO: Unify the above and below
+pub fn gen_statistics(wanted_list: &WantedList) -> WantedListStatistics {
+    let mut statistics = WantedListStatistics::init();
+    wanted_list
+        .items
+        .iter()
+        .for_each(|item| update_wanted_list_statistic(item, &mut statistics));
+    statistics
 }
 
 impl std::convert::From<WantedList> for SerdeWantedList {
